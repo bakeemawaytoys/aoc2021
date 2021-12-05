@@ -4,35 +4,27 @@ record Submarine where
     constructor SubmarineState
     position : Nat
     depth : Nat
+    aim : Nat
 
 initState : Submarine
-initState = SubmarineState 0 0
+initState = SubmarineState 0 0 0
 
-processCommand : (x : Submarine) -> (y : Command) -> Submarine
-processCommand x (Forward units) = record {position $= (+ units)} x
-processCommand x (Down units) = record {depth $= (+ units)} x
-processCommand x (Up units) = record {depth $= (\u => minus u units)} x
+processPart1Command : (x : Submarine) -> (y : Command) -> Submarine
+processPart1Command x (Forward units) = record {position $= (+ units)} x
+processPart1Command x (Down units) = record {depth $= (+ units)} x
+processPart1Command x (Up units) = record {depth $= (\u => minus u units)} x
 
-processCommands : Submarine -> List Command -> Submarine
-processCommands x [] = x
-processCommands x (y :: xs) = processCommands (processCommand x y) xs
+processPart2Command : (x : Submarine) -> (y : Command) -> Submarine
+processPart2Command x (Forward units) = record {position $= (+ units), depth $= (\d => d + (mult units (aim x)))} x
+processPart2Command x (Down units) = record {aim $= (+ units)} x
+processPart2Command x (Up units) = record {aim $= (\u => minus u units)} x
+
+processCommands : (Submarine -> Command -> Submarine ) -> Submarine -> List Command -> Submarine
+processCommands commandProcessor submarine [] = submarine
+processCommands commandProcessor submarine (command :: xs) = processCommands commandProcessor (commandProcessor submarine command) xs
 
 finalResult : Submarine -> Nat
-finalResult (SubmarineState position depth) = position * depth
-
-testPart1 : Nat
-testPart1 = 
-    let 
-        commands = [
-            Forward 5,
-            Down 5,
-            Forward 8,
-            Up 3,
-            Down 8,
-            Forward 2
-        ]
-    in
-        finalResult (processCommands initState commands)
+finalResult submarine = position submarine * depth submarine
 
 isNumber : String -> Bool
 isNumber str = all isDigit (unpack str)
@@ -56,7 +48,6 @@ parseLines lines =
     ([], commands) => Right commands
     (errors, _) => Left errors
 
-
 main: IO()
 main = do
         file <- readFile "input.txt"
@@ -65,9 +56,27 @@ main = do
                 case parseLines (lines content) of
                     Right commands => 
                         let
-                            part1Solution = finalResult (processCommands initState commands)
-                            output = ("Part 1: " ++ (show part1Solution))
+                            part1Solution = finalResult (processCommands processPart1Command initState commands)
+                            part2Solution = finalResult (processCommands processPart2Command initState commands)
+                            output = ("Part 1: " ++ (show part1Solution) ++ "\nPart2: " ++ (show part2Solution))
                         in
                             putStrLn output
                     Left errors => putStrLn (unlines errors)
             Left err => printLn err
+
+
+testData : List Command
+testData = [
+            Forward 5,
+            Down 5,
+            Forward 8,
+            Up 3,
+            Down 8,
+            Forward 2
+        ]
+
+testPart1 : Nat
+testPart1 =  finalResult (processCommands processPart1Command initState testData)
+
+testPart2 : Nat
+testPart2 = finalResult (processCommands processPart2Command initState testData)
